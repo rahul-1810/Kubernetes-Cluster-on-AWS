@@ -1,0 +1,64 @@
+- hosts: localhost
+  vars_files:
+      - aws_keys.yml
+  tasks:
+  - name: Launching Master Node AWS cloud
+    ec2:
+          key_name: "newkey"
+          instance_type: "t2.micro"
+          image:  "ami-0bcf5425cdc1d8a85"
+          wait: yes
+          count: 1
+          vpc_subnet_id: "subnet-37bab35f"
+          group_id: sg-0da64e7cde434f60a
+          assign_public_ip: yes
+          region: "ap-south-1"
+          state: present
+          group: "default"
+          aws_access_key: "{{ access_key   }}"
+          aws_secret_key: "{{  secret_key   }}"
+          instance_tags: {"Name": "K8S-Master"}
+
+    register: master
+- hosts: localhost
+  vars_files:
+      - aws_keys.yml
+  tasks:
+  - name: Launching  WorkerNode-1 on AWS cloud
+    ec2:
+          key_name: "newkey"
+          instance_type: "t2.micro"
+          image:  "ami-0bcf5425cdc1d8a85"
+          wait: yes
+          count: 1
+          vpc_subnet_id: "subnet-37bab35f"
+          group_id: sg-0da64e7cde434f60a
+          assign_public_ip: yes
+          region: "ap-south-1"
+          state: present
+          group: "default"
+          aws_access_key: "{{ access_key   }}"
+          aws_secret_key: "{{  secret_key   }}"
+          instance_tags: {"Name": "K8S-Slave-1"}
+
+
+- hosts: localhost
+  vars_files:
+        - aws_keys.yml
+  tasks:
+  - name: Launching  WorkerNode-2  on AWS cloud
+    ec2:
+          key_name: "newkey"
+          instance_type: "t2.micro"
+          image:  "ami-0bcf5425cdc1d8a85"
+          wait: yes
+          count: 1
+          vpc_subnet_id: "subnet-37bab35f"
+          group_id: sg-0da64e7cde434f60a
+          assign_public_ip: yes
+          region: "ap-south-1"
+          state: present
+          group: "default"
+          aws_access_key: "{{ access_key   }}"
+          aws_secret_key: "{{  secret_key   }}"
+          instance_tags: {"Name": "K8S-Slave-2"}

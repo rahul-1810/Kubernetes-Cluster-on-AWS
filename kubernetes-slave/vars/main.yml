@@ -1,0 +1,7 @@
+---
+# vars file for kubernetes-slave
+#
+packages:
+        - kubeadm
+        - kubelet
+        - kubectl

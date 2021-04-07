@@ -1,0 +1,66 @@
+---
+# tasks file for kubernetes-slave
+ - name: "Installing the Docker"
+   package:
+     name: docker
+     state: present
+ - name: "Starting and Enabling Docker service"
+   service:
+     name: docker
+     state: started
+     enabled: yes
+
+ - name: "Creating kubeadm Yum repo" 
+   yum_repository:
+      name: "kubernetes"
+      description: "kubernets repo"
+      baseurl: 'https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch'
+      gpgcheck: yes
+      repo_gpgcheck: yes
+      gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+
+ - name: "Installing kubeadm, kubectl, kubelet"
+   yum:
+     name: "{{ item }}"
+     state: present
+     disable_excludes: kubernetes
+   loop: "{{ packages }}"
+
+ - name: "Starting and Enabling kubelet"
+   service:
+     name: kubelet
+     state: started
+     enabled: yes
+ - name: "Changing the driver in the docker"
+   copy:
+      content: |
+         {
+            "exec-opts": ["native.cgroupdriver=systemd"]
+         }
+      dest: /etc/docker/daemon.json
+   register: done
+
+ - name: "Restarting Docker"
+   service:
+      name: docker
+      state: restarted
+   when: done.changed == true
+
+ - name: "Installing iproute-tc"
+   package:
+      name: iproute-tc
+      state: present
+
+ - name: "Setting bridge-nf-call-iptables to 1"
+   shell: | 
+       echo "1"  > /proc/sys/net/bridge/bridge-nf-call-iptables
+       echo "1"  > /proc/sys/net/bridge/bridge-nf-call-ip6tables
+   changed_when: false
+
+ - name: "Joining Slave to Master"
+   shell: "{{ master_token }}"
+   ignore_errors: yes
+   register: joined
+
+ - debug:
+     var: joined.stdout_lines

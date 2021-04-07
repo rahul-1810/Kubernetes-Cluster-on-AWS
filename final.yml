@@ -1,0 +1,14 @@
+- hosts: masternode
+  roles:
+   - name: "Configuring Master Node"
+     role:  "/kubernetes-cluster/kubernetes-master"
+
+
+- hosts: slavenodes
+  vars_prompt:
+  - name: "master_token"
+    prompt: "Enter Token to Join Slave Nodes to Master Node: "
+    private: no
+  roles:
+   - name: "Configuring Slave Nodes"
+     role:  "/kubernetes-cluster/kubernetes-slave"

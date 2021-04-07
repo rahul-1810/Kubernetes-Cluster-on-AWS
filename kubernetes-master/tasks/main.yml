@@ -1,0 +1,89 @@
+---
+# tasks file for kubernetes-master
+ - name: "Installing the Docker"
+   package:
+     name: docker
+     state: present
+ - name: "Starting and Enabling Docker service"
+   service:
+     name: docker
+     state: started
+     enabled: yes
+
+ - name: "Creating kubeadm Yum repo" 
+   yum_repository:
+      name: "kubernetes"
+      description: "kubernets repo"
+      baseurl: 'https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch'
+      gpgcheck: yes
+      repo_gpgcheck: yes
+      gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+
+ - name: "Installing kubeadm, kubectl, kubelet"
+   yum:
+     name: "{{ item }}"
+     state: present
+     disable_excludes: kubernetes
+   loop: "{{ packages }}"
+
+ - name: "Starting and Enabling kubelet"
+   service:
+     name: kubelet
+     state: started
+     enabled: yes
+
+ - name: "Pulling Images using kubeadm"
+   shell: "kubeadm config images pull"
+   changed_when: false
+
+ - name: "Changing the driver in the docker"
+   copy:
+      content: |
+         {
+            "exec-opts": ["native.cgroupdriver=systemd"]
+         }
+      dest: /etc/docker/daemon.json
+   register: done
+
+ - name: "Restarting Docker"
+   service:
+      name: docker
+      state: restarted
+   when: done.changed == true
+
+ - name: "Installing iproute-tc"
+   package:
+      name: iproute-tc
+      state: present
+
+ - name: "Setting bridge-nf-call-iptables to 1"
+   shell: | 
+       echo "1"  > /proc/sys/net/bridge/bridge-nf-call-iptables
+   changed_when: false
+
+
+ - name: "Initializing the Master node"
+   shell: "kubeadm init --pod-network-cidr=10.240.0.0/16 --ignore-preflight-errors=NumCPU --ignore-preflight-errors=Mem"
+   ignore_errors: yes
+
+ - name: "Creating .kube directory"
+   shell: "mkdir -p $HOME/.kube"
+
+ - name: "Copying admin.conf to user's kube config"
+   shell: "sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config"
+
+ 
+ - name: "Make current user owner of this config file"
+   shell: "chown $(id -u):$(id -g) $HOME/.kube/config"
+
+ - name: "Configuring with flannel plugin"
+   shell: "kubectl apply  -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml"
+
+ - name: "Generating Token"
+   shell: "kubeadm token create  --print-join-command"
+   register: token
+   ignore_errors: yes
+
+ - debug: 
+     var: token.stdout_lines
+   register: token
